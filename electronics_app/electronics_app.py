@@ -11,20 +11,36 @@ class State(rx.State):
     ai_text: str = ""
     show_modal: bool = False
 
+    # ✅ FIX: added event decorator + safer logic
+    @rx.event
     def fetch_products(self):
         self.loading = True
-        url = "https://fakestoreapi.com/products/category/electronics"
-        response = requests.get(url)
 
-        if response.status_code == 200:
-            self.products = response.json()
+        try:
+            url = "https://fakestoreapi.com/products/category/electronics"
+            response = requests.get(url)
+
+            if response.status_code == 200:
+                self.products = response.json()
+            else:
+                self.products = []
+
+        except Exception as e:
+            print("Fetch error:", e)
+            self.products = []
 
         self.loading = False
 
+    # ✅ FIX: event-safe method (no lambda usage needed)
+    @rx.event
     def explain_product(self, product: Dict):
-        self.ai_text = f"{product.get('title')} costs ${product.get('price')}.\n\n{product.get('description')}"
+        self.ai_text = (
+            f"{product.get('title')} costs ${product.get('price')}.\n\n"
+            f"{product.get('description')}"
+        )
         self.show_modal = True
 
+    @rx.event
     def close_modal(self):
         self.show_modal = False
 
@@ -54,11 +70,12 @@ def product_card(product):
                 font_size="1.1rem",
             ),
 
+            # ✅ FIX: removed lambda (this was breaking click behavior)
             rx.button(
                 "Explain",
                 width="100%",
                 color_scheme="purple",
-                on_click=lambda: State.explain_product(product),
+                on_click=State.explain_product(product),
             ),
 
             spacing="3",
@@ -103,19 +120,25 @@ def index() -> rx.Component:
                 size="3",
             ),
 
+            # ✅ FIX: proper reactive rendering
             rx.cond(
-                State.products == [],
-                rx.text("Click the button to load products 👆", color="gray"),
+                State.loading,
+                rx.text("Loading products...", color="gray"),
 
-                rx.grid(
-                    rx.foreach(State.products, lambda p: product_card(p)),
-                    columns="3",
-                    spacing="6",
-                    width="100%",
+                rx.cond(
+                    len(State.products) == 0,
+                    rx.text("Click the button to load products 👆", color="gray"),
+
+                    rx.grid(
+                        rx.foreach(State.products, product_card),
+                        columns="3",
+                        spacing="6",
+                        width="100%",
+                    ),
                 ),
             ),
 
-            # ✅ MODAL FIXED (inside layout, not children=)
+            # ✅ MODAL (unchanged structure, already correct)
             rx.dialog.root(
                 rx.dialog.content(
                     rx.vstack(
