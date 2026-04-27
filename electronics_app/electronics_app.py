@@ -21,7 +21,7 @@ class State(rx.State):
             response = requests.get(url)
 
             if response.status_code == 200:
-                self.products = response.json()
+                self.products = list(response.json())
             else:
                 self.products = []
 
