@@ -11,7 +11,9 @@ class State(rx.State):
     ai_text: str = ""
     show_modal: bool = False
 
-    # ✅ FIX: added event decorator + safer logic
+    # ✅ FIX 1: added selected product storage
+    selected_product: Dict[str, Any] = {}
+
     @rx.event
     def fetch_products(self):
         print("🔥 BUTTON CLICKED")
@@ -32,12 +34,18 @@ class State(rx.State):
 
         self.loading = False
 
-    # ✅ FIX: event-safe method (no lambda usage needed)
+    # ✅ FIX 2: setter for selected product
     @rx.event
-    def explain_product(self, product: Dict):
+    def set_product(self, product: Dict):
+        self.selected_product = product
+
+    # ✅ FIX 3: explain uses stored product (NO ARGUMENTS)
+    @rx.event
+    def explain_product(self):
+        p = self.selected_product
         self.ai_text = (
-            f"{product.get('title')} costs ${product.get('price')}.\n\n"
-            f"{product.get('description')}"
+            f"{p.get('title')} costs ${p.get('price')}.\n\n"
+            f"{p.get('description')}"
         )
         self.show_modal = True
 
@@ -71,12 +79,15 @@ def product_card(product):
                 font_size="1.1rem",
             ),
 
-            # ✅ FIX: removed lambda (this was breaking click behavior)
+            # ✅ FIX 4: correct event chaining pattern
             rx.button(
                 "Explain",
                 width="100%",
                 color_scheme="purple",
-                on_click=State.explain_product(product),
+                on_click=[
+                    State.set_product(product),
+                    State.explain_product
+                ],
             ),
 
             spacing="3",
@@ -121,13 +132,13 @@ def index() -> rx.Component:
                 size="3",
             ),
 
-            # ✅ FIX: proper reactive rendering
+            # ✅ FIX 5: safe condition (NO .length())
             rx.cond(
                 State.loading,
                 rx.text("Loading products...", color="gray"),
 
                 rx.cond(
-                    State.products.length() == 0,
+                    State.products == [],
                     rx.text("Click the button to load products 👆", color="gray"),
 
                     rx.grid(
@@ -139,7 +150,7 @@ def index() -> rx.Component:
                 ),
             ),
 
-            # ✅ MODAL (unchanged structure, already correct)
+            # Modal (unchanged)
             rx.dialog.root(
                 rx.dialog.content(
                     rx.vstack(
