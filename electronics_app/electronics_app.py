@@ -126,7 +126,7 @@ def index() -> rx.Component:
                 rx.text("Loading products...", color="gray"),
 
                 rx.cond(
-                    len(State.products) == 0,
+                    State.products.length() == 0,
                     rx.text("Click the button to load products 👆", color="gray"),
 
                     rx.grid(
