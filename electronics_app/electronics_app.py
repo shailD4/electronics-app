@@ -14,6 +14,7 @@ class State(rx.State):
     # ✅ FIX: added event decorator + safer logic
     @rx.event
     def fetch_products(self):
+        print("🔥 BUTTON CLICKED")
         self.loading = True
 
         try:
