@@ -11,12 +11,10 @@ class State(rx.State):
     ai_text: str = ""
     show_modal: bool = False
 
-    # ✅ FIX 1: added selected product storage
     selected_product: Dict[str, Any] = {}
 
     @rx.event
     def fetch_products(self):
-        print("🔥 BUTTON CLICKED")
         self.loading = True
 
         try:
@@ -24,7 +22,12 @@ class State(rx.State):
             response = requests.get(url)
 
             if response.status_code == 200:
-                self.products = list(response.json())
+                data = response.json()
+
+                # ✅ SAFE REFRESH PATTERN (forces UI update)
+                self.products = []
+                self.products = list(data)
+
             else:
                 self.products = []
 
@@ -34,12 +37,10 @@ class State(rx.State):
 
         self.loading = False
 
-    # ✅ FIX 2: setter for selected product
     @rx.event
     def set_product(self, product: Dict):
         self.selected_product = product
 
-    # ✅ FIX 3: explain uses stored product (NO ARGUMENTS)
     @rx.event
     def explain_product(self):
         p = self.selected_product
@@ -79,7 +80,6 @@ def product_card(product):
                 font_size="1.1rem",
             ),
 
-            # ✅ FIX 4: correct event chaining pattern
             rx.button(
                 "Explain",
                 width="100%",
@@ -132,13 +132,13 @@ def index() -> rx.Component:
                 size="3",
             ),
 
-            # ✅ FIX 5: safe condition (NO .length())
+            # ✅ FIXED CONDITION (IMPORTANT)
             rx.cond(
                 State.loading,
                 rx.text("Loading products...", color="gray"),
 
                 rx.cond(
-                    State.products == [],
+                    State.products.length() == 0,
                     rx.text("Click the button to load products 👆", color="gray"),
 
                     rx.grid(
@@ -150,7 +150,6 @@ def index() -> rx.Component:
                 ),
             ),
 
-            # Modal (unchanged)
             rx.dialog.root(
                 rx.dialog.content(
                     rx.vstack(
